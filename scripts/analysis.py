@@ -32,13 +32,14 @@ def merge_data(file_list,pheno_file,test=True):
 
 
 def pca(data_df,out_dir,n_components = 10,renorm = True):
-    
-    # FILL WITH MEAN
+    """
+    Performs PCA and adds PC columns to data
+    """
     
     print(data_df)
     pca = PCA(n_components=n_components)
     pcs =  pca.fit_transform(data_df)
-
+    # saves weights
     pc_cols = [f"PC{i+1}" for i in range(n_components)]
     weight_df = pd.DataFrame()
     weight_df[pc_cols] = pca.components_.T
@@ -56,10 +57,9 @@ def main(args):
 
     # MERGE DATA
     with open(args.file_list) as i:file_list=[elem.strip() for elem in i.readlines()]
-    out_file = os.path.join(args.out,'nmr_data.txt')
     df = merge_data(file_list,args.pheno_file,args.test)
-    df.to_csv(out_file,sep='\t')
-    print(f"data dumped to {out_file}")
+    print(f"data dumped to {args.out_file}")
+    df.to_csv(args.out_file,sep='\t')
 
     # read in analysis cols (i.e. float cols)
     with open(args.analysis_cols) as i:analysis_cols=  [elem.strip() for elem in i.readlines()]
@@ -87,8 +87,13 @@ def main(args):
     data_df = pca(data_df,args.out,args.n_pca)
     plot_df = data_df.copy().assign(TAG=meta_df.TAG)
     plot_2d(plot_df,os.path.join(args.fig_path,'PCA_plot.pdf'),set(plot_df.TAG),label_fontsize=3)
- 
-    data_df.to_csv(args.out_file.replace('.tsv','_meta.tsv'),sep='\t')
+
+
+    age_sex_df = df[['AGE','SEX']]
+    final_df = data_df.join(age_sex_df)
+    print(final_df)
+    final_df.to_csv(args.out_file.replace('.tsv','_renormed.tsv'),sep='\t')
+
     
     
 if __name__=='__main__':
@@ -107,5 +112,5 @@ if __name__=='__main__':
     print(args.out)
     args.fig_path = os.path.join(args.out,'figs/')
     make_sure_path_exists(args.fig_path)
-    args.out_file =os.path.join(args.out,'data.tsv')
+    args.out_file =os.path.join(args.out,'nmr_data.tsv')
     main(args)
